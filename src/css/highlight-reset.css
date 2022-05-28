@@ -1,0 +1,54 @@
+.hljs-comment,.hljs-quote {
+  color: inherit;
+  font-style: inherit;
+}
+.hljs-keyword,.hljs-selector-tag,.hljs-subst {
+  color: inherit;
+  font-weight: inherit;
+}
+.hljs-literal,.hljs-number,.hljs-tag .hljs-attr,.hljs-template-variable,.hljs-variable {
+  color: inherit;
+}
+.hljs-doctag,.hljs-string {
+  color: inherit;
+}
+.hljs-section,.hljs-selector-id,.hljs-title {
+  color: inherit;
+  font-weight: inherit;
+}
+.hljs-subst {
+  font-weight: inherit;
+}
+.hljs-class .hljs-title,.hljs-type {
+  color: inherit;
+  font-weight: inherit;
+}
+.hljs-attribute,.hljs-name,.hljs-tag {
+  color: inherit;
+  font-weight: inherit;
+}
+.hljs-link,.hljs-regexp {
+  color: inherit;
+}
+.hljs-bullet,.hljs-symbol {
+  color: inherit;
+}
+.hljs-built_in,.hljs-builtin-name {
+  color: inherit;
+}
+.hljs-meta {
+  color: inherit;
+  font-weight: inherit;
+}
+.hljs-deletion {
+  background: inherit;
+}
+.hljs-addition {
+  background: inherit;
+}
+.hljs-emphasis {
+  font-style: inherit;
+}
+.hljs-strong {
+  font-weight: inherit;
+}

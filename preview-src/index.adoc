@@ -1,3 +1,608 @@
+= 模型
+:toc:
+:toc-title:
+
+实体类代表为领域模型，并使用xml格式定义。
+
+每个文件都应该有适当的声明:
+
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<domain-models xmlns="http://axelor.com/xml/ns/domain-models"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/domain-models
+  http://axelor.com/xml/ns/domain-models/domain-models_6.0.xsd">
+
+  <!-- 在这里定义实体 -->
+
+</domain-models>
+----
+
+IMPORTANT: Java保留的关键字不能用作字段名称。SQL保留关键字 (PostgreSQL，MySQL & Oracle) 不能用作列名。
+
+让我们看一个例子:
+
+[source,xml]
+.axelor-contact/src/main/resources/domains/Address.xml
+----
+<module name="contact" package="com.axelor.contact.db" />
+
+<entity name="Contact">
+  <many-to-one name="title" ref="Title"/> <1>
+  <string name="firstName" required="true" /> <2>
+  <string name="lastName" required="true" />
+
+  <string name="fullName" namecolumn="true" search="firstName,lastName"> <3>
+    <![CDATA[
+    if (firstName == null && lastName == null)
+        return null;
+    if (title == null)
+        return firstName + " " + lastName;
+    return title.getName() + " " + firstName + " " + lastName;
+  ]]></string>
+
+  <date name="dateOfBirth"/>
+
+  <string name="email" required="true" unique="true" max="100" />
+  <string name="phone" max="20" massUpdate="true"/>
+  <string name="notes" title="About me" large="true" />
+
+  <one-to-many name="addresses" ref="Address" mappedBy="contact"/> <4>
+
+  <finder-method name="findByName" using="fullName" /> <5>
+  <finder-method name="findByEmail" using="email" />
+</entity>
+----
+<1> 定义了一个多对一的字段 `title` 引用了一个 `Title` 对象
+<2> 定义了一个字符串字段 `firstName`
+<3> 定义了一个计算的字符串字段 `fullName`
+<4> 定义了一个一对多字段 `addresses` 引用了一个 `Address` 对象
+<5> 定义了一个自定义的查询方法 `findByName`
+
+领域对象使用 `<entity>` 标签进行定义，它支持以下的一些属性：
+
+* `name` - 实体名称 (应以大写字母开头)
+* `sequential` - 是否使用新的ID序列 (默认为true)
+* `cacheable` -是否使此实体可缓存 (默认为false)
+* `repository=[none|default|abstract]` - 如何生成存储库类
+* `table` - 实体的表名
+* `logUpdates` - 是否启用更新日志记录 (默认为true)
+* `lang` - 生成源代码的语言 (默认为java)
+* `extends` - 继承基实体类
+* `implements` - 要实现的接口列表 (一般为空，或确认getter/setter)
+* `persistable` - 此实体是否可持久 (在数据库中)
+* `strategy=[SINGLE|JOINED|CLASS]` - 继承策略 (默认为单一)
+* `equalsIncludeAll` - 是否在相等性测试中包括所有简单的非功能字段 (默认为false) - _版本5.4后的新特性_
+* `hashAll` - 是否使用所有简单的非函数字段作为哈希键 (默认为false)
+
+`strategy` 属性只能在基础实体上使用。
+
+`persistable` 属性可用于定义不可持久的实体类，并加以注解 `@MappedSuperclass` 将可以用作其他实体的基类。
+
+`<module>` 标签可用于定义生成的实体的包名称 & 存储库:
+
+[source,xml]
+----
+<!-- 默认方式 -->
+<module name="contact"
+  package="com.axelor.contact.db"
+  repo-package="com.axelor.contact.db.repo"
+  table-prefix="contact" />
+
+<!-- 自定义方式 -->
+<module name="contact"
+  package="my.models"
+  repo-package="my.repos"
+  table-prefix="my" />
+----
+
+* `name` - 是必需的，用于对逻辑模块中的实体进行分组
+* `package` - 是必需的，用作生成的实体类的java包名
+* `repo-package` - 是可选的，用作生成的存储库类的java包名称，缺省为 `<package>.repo`
+* `table-prefix` - 是可选的，用作表名前缀，缺省为 module 的 `name`
+
+WARNING: 如果报名以 .db 为后缀, 倒数第二个包名的名称将会替代module `name` 而作为缺省的数据库库表前缀，例如：包名为： `com.axelor.sale.db`, `sale` 将会被作为缺省的数据库表名的前缀。
+
+== 字段
+
+不同类型的字段用于定义模型属性。
+
+以下是所有字段类型的通用属性:
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| *`name`* | 字段名称 (必填)
+| `title` | 显示字段的标题
+| `help` | 详细帮助字符串
+| `column` | 数据库列名 (如果字段名称是基础数据库中的保留名称)
+| `index` | 是否生成该字段的索引
+| `default` | 字段的默认值
+| `required` | 字段值是否需要
+| `readonly` | 字段值是否为只读
+| `unique` | 字段值是否唯一 (定义唯一约束)
+| `insertable` | 该列是否包含在持久性提供程序生成的SQL INSERT语句中 - _版本5.3.8、5.4.1中的新功能_
+| `updatable` | 该列是否包含在持久性提供程序生成的SQL UPDATE语句中 - _版本5.3.8、5.4.1中的新功能_
+| `hidden` | 默认情况下，用户界面中的字段是否隐藏
+| `transient` | 字段是否为瞬态 (无法保存在db中)
+| `initParam` | 是否使用字段作为构造方法的入参
+| `massUpdate` | 是否允许此字段的批量更新
+|===
+
+非关系字段具有以下额外属性:
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `nullable` | 允许为默认情况下在未给出值时使用其系统默认值的字段存储null值
+| `selection` | 选择键名称
+| `equalsInclude` | 该字段是否包含在相等性测试中 - _版本5.4后的新特性_
+| `hashKey` | 是否将此字段视为hashCode候选
+| `formula` | 这是否是原生SQL公式字段
+|===
+
+=== String
+
+`<string>` 字段 用于定义文本数据字段。
+
+该字段接受以下附加属性:
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `min` | 文本值的最小长度
+| `max` | 文本值的最大长度
+| `large` | 是否使用大文本类型
+| `search` | 自动完成UI组件用于搜索的字段名称的逗号分隔列表
+| `sequence` | 用户指定的自定义序列生成器
+| `multiline` | 字符串是否是多行文本 (由UI组件使用)
+| `translatable` | 字段值是否可翻译
+| `password` | 字段是否存储密码文本
+| `encrypted` | 字段是否加密
+|===
+
+示例:
+
+[source,xml]
+----
+<string name="firstName" min="1" />
+<string name="lastName"/>
+<string name="notes" large="true" multiline="true"/>
+----
+
+`translatable` 属性可用于将字段值标记为可翻译的。
+
+例如:
+
+[source,xml]
+----
+<entity name="Product">
+  <string name="name" translatable="true" />
+</entity>
+----
+
+翻译后的值存储在同一通用翻译数据库库表中 (未保存上下文)。
+
+`encrypted` 字段值使用AES-256加密值存储在数据库中。
+密码应该从应用程序配置文件中提供，使用 `encryption.password` 键。
+
+=== Boolean
+
+`<boolean>` 字段 用于定义布尔类型字段。
+
+示例:
+
+[source,xml]
+----
+<boolean name="active" />
+----
+
+=== Integer
+
+`<integer>` 字段用于定义整数字段。
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `min` | 最小值 (含)
+| `max` | 最大值 (含)
+|===
+
+示例:
+
+[source,xml]
+----
+<integer name="quantity" min="1" max="100"/>
+<integer name="count"/>
+----
+
+=== Long
+
+`<long>` 字段用于定义无法使用 `intger` 类型表示值的整数字段
+
+IMPORTANT: 避免使用此字段类型，因为某些dbms (oracle) 只允许每个表有一个长列 (我们已经有一个id的长列)
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `min` | 最小值 (含)
+| `max` | 最大值 (含)
+|===
+
+示例:
+
+[source,xml]
+----
+<long name="counter"/>
+----
+
+=== Decimal
+
+`<decimal>` 字段使用 `java.math.BigDecimal` Java类型定义十进制类型字段。
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `min` | 最小值 (含)
+| `max` | 最大值 (含)
+| `precision` | 十进制值的精度 (总位数)
+| `scale` | 十进制值的比例 (十进制部分的总位数)
+|===
+
+示例:
+
+[source,xml]
+----
+<decimal name="price" precision="8" scale="2" />
+----
+
+=== Date
+
+`<date>` 字段使用 `java.time.LocalDate` java类型定义存储日期的字段
+
+示例:
+
+[source,xml]
+----
+<date name="orderDate" />
+----
+
+=== Time
+
+`<time>` 字段使用 `java.time.LocalTime` java类型定义存储时间值的字段
+
+示例:
+
+[source,xml]
+----
+<time name="duration" />
+----
+
+=== DateTime
+
+`<datetime>` 字段使用 `java.time.LocalDateTime` java类型定义存储日期时间值的字段
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `tz` | 是否使用时区信息
+|===
+
+当 `tz` 值为 true, java 类型是 `java.time.ZonedDateTime`
+
+示例:
+
+[source,xml]
+----
+<datetime name="startsOn" />
+<datetime name="startsOn" tz="true"/>
+----
+
+=== Enum
+
+`<enum>` 字段用于定义具有Java枚举类型的字段。
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `ref` | 枚举的全命名类型名称
+|===
+
+示例:
+
+[source,xml]
+----
+<enum name="status" ref="OrderStatus" />
+----
+
+`OrderStatus` 枚举应该使用领域xml定义:
+
+.具有默认值的枚举
+[source,xml]
+----
+<enum name="OrderStatus">
+  <item name="DRAFT" />
+  <item name="OPEN" />
+  <item name="CLOSED" />
+  <item name="CANCELED" />
+</enum>
+----
+
+.带有自定义字符串值的枚举
+[source,xml]
+----
+<enum name="OrderStatus">
+  <item name="DRAFT" value="draft" />
+  <item name="OPEN" value="open" />
+  <item name="CLOSED" value="closed" />
+  <item name="CANCELED" value="canceled" />
+</enum>
+----
+
+.带有自定义数字值的枚举
+[source,xml]
+----
+<enum name="OrderStatus" numeric="true">
+  <item name="DRAFT" value="1" />
+  <item name="OPEN" value="2" />
+  <item name="CLOSED" value="3" />
+  <item name="CANCELED" value="4" />
+</enum>
+----
+
+针对 基于 `enum` 字段的JPQL 查询，我们必须始终使用查询参数的方式进行查询。
+
+[source,java]
+----
+// 这是正确的方法
+TypedQuery<Order> query = em.createQuery(
+  "SELECT s FROM Order s WHERE s.status = :status");
+
+query.setParameter("status", OrderStatus.OPEN);
+
+// 这是错误的方式
+TypedQuery<Order> query = em.createQuery(
+  "SELECT s FROM Order s WHERE s.status = 'OPEN'");
+
+// 使用ADK查询API
+Query<Order> q = Query.of(Order.class)
+  .filter("self.status = :status")
+  .bind("status", "OPEN");
+
+// 或
+
+Query<Order> q = Query.of(Order.class)
+  .filter("self.status = :status")
+  .bind("status", OrderStatus.OPEN);
+
+// 或直接作为位置参数
+Query<Order> q = Query.of(Order.class)
+  .filter("self.status = ?1 OR self.status = ?2", "DRAFT", OrderStatus.OPEN);
+----
+
+在脚本表达式中， `enum` 应该使用其类型名称进行引用。例如:
+
+[source,xml]
+----
+<check
+  field="confirmDate"
+  if="status == OrderStatus.OPEN &amp;&amp; confirmDate == null"
+  error="Invalid value..." />
+----
+
+=== Binary
+
+`<binary>` 字段用于存储二进制blob。
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `image` | 如果该字段旨在存储图像数据
+| `encrypted` |字段是否加密
+|===
+
+TIP: 仅将此字段用于小型或不可重用的二进制数据， 建议使用 `many-to-one` 指向 `com.axelor.meta.db.MetaFile`.
+
+示例:
+
+[source,xml]
+----
+<binary name="photo" image="true" />
+<binary name="report" />
+----
+
+=== ManyToOne
+
+`<many-to-one>` 字段用于定义单个值引用字段多对一的关系。
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `ref` | 参考实体类的名称 (如果不在同一包中，则使用FQN 全包名)
+|===
+
+示例:
+
+[source,xml]
+----
+<many-to-one name="customer" ref="com.axelor.contact.db.Contact" />
+----
+
+=== OneToOne
+
+`<one-to-one>` 字段用于使用一对一关系定义单个值引用字段。
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `ref` | 参考实体类的名称 (如果不在同一包中，则使用FQN 全包名)
+| `mappedBy` | 对于双向字段，所有者侧字段的名称
+|===
+
+[source,xml]
+----
+<!-- 在Engine对象中定义 -->
+<one-to-one name="car" ref="com.axelor.cars.db.Car" />
+
+<!-- 在Cat对象中定义 -->
+<one-to-one name="engine" ref="com.axelor.cars.db.Engine" mappedBy="car"/>
+----
+
+=== OneToMany
+
+`<one-to-many>` 字段用于使用一对多关系定义多值字段。
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `ref` | 参考实体类的名称 (如果不在同一包中，则使用FQN 全包名)
+| `mappedBy` | 对于双向字段，多对一反向字段的名称
+| `orphanRemoval` | 是否删除孤立记录 (默认为true)
+| `orderBy` | 通过给定字段指定集合值的顺序
+|===
+
+[source,xml]
+----
+<one-to-many name="items" ref="OrderItem" mappedBy="order" />
+<one-to-many name="addresses" ref="Address" mappedBy="contact" />
+----
+
+=== ManyToMany
+
+`<many-to-many>` 字段用于使用多对多关系定义多值字段。
+
+[cols="2,8"]
+|===
+| 属性 | 描述
+
+| `ref` | 参考实体类的名称 (如果不在同一包中，则使用FQN 全包名)
+| `mappedBy` | 对于双向字段，所有者侧字段的名称
+| `orderBy` | 通过给定字段指定集合值的顺序
+|===
+
+[source,xml]
+----
+<many-to-many name="taxes" ref="Tax" />
+----
+
+== Index
+
+`<index>` 标记可用于定义复合索引。
+
+它是通过指定一个逗号分隔的列名列表来定义的 `columns` 属性，可以使用  `name` 属性来定义名称。
+
+[source,xml]
+----
+<index columns="firstName,lastName,fullName" name="idx_names"/>
+----
+
+可以使用 `index` 属性在字段上定义索引，可以提供自定义(以 'idx_' 为前缀)索引名称，否则使用表名和列名生成默认索引名。
+
+默认情况下，所有 `reference fields`、`namecolumn`、`name` 和 `code` 都会自动建立索引。
+
+[source,xml]
+----
+<string name="firstName" required="true" index="true"/>
+<string name="lastName" required="true" index="idx_contact_last_name"/>
+----
+
+== 唯一约束
+
+`<unique-constraint>` 标记可用于定义复合唯一约束。
+
+它是通过指定一个逗号分隔的列名列表来定义的 `columns` 属性，名称可以通过 `name` 属性来定义。
+
+[source,xml]
+----
+<unique-constraint columns="first_name,last_name" />
+----
+
+== 字段加密
+
+从5.0开始，我们现在可以加密敏感字段。为了使用此功能，需要以下应用程序设置:
+
+[source,properties]
+----
+# 加密
+# ~~~~~
+# 设置加密密码
+encryption.password = MySuperSecretKey
+
+# 设置加密算法 (CBC或GCM)
+#encryption.algorithm = CBC
+----
+
+我们可以标识 `<string>` 和 `<binary>` 为加密的字段，如下：
+
+[source,xml]
+----
+<string name="myEmail" encrypted="true" />
+<binary name="myPicture" encrypted="true" />
+----
+
+加密值将比实际值长，因此您应确保字段大小足够好，可以将加密值保存在数据库中。
+
+== 实体侦听器
+
+:url-entity-listeners: https://javaee.github.io/javaee-spec/javadocs/javax/persistence/EntityListeners.html
+
+一个或多个 `<entity-listener>` 标签可用于定义 {url-entity-listeners}[实体侦听器]，这将会增加一个 `@EntityListeners` 注解到生成的实体对象类上面去：
+
+[source,xml]
+----
+<entity name="Contact">
+  ...
+  <entity-listener class="com.axelor.contact.db.repo.ContactListener"/>
+</entity>
+----
+
+[cols="2,8"]
+|===
+| Attribute | 描述
+
+| `class` | 实体侦听器类的完全限定名称
+|===
+
+你可以使用带有生命周期事件注释的回调方法来定义自己的实体侦听器类，来调用它们:
+
+[source,java]
+----
+public class ContactListener {
+
+  // 调用联系人对象上的PostPersist或PostUpdate事件。
+  @PostPersist
+  @PostUpdate
+  private void onPostPersistOrUpdate(Contact contact) {
+    System.out.println("Contact saved");
+  }
+}
+----
+
+生命周期事件注释:
+
+* `@PrePersist`
+* `@PostPersist`
+* `@PreRemove`
+* `@PostRemove`
+* `@PreUpdate`
+* `@PostUpdate`
+* `@PostLoad`
+
+
+
 = Hardware and Software Requirements
 Author Name
 :idprefix:
@@ -314,3 +919,5 @@ ____
 == Fin
 
 That's all, folks!
+
+

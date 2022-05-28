@@ -1,0 +1,19 @@
+@import "highlight-reset.css";
+@import "atom-one-dark.css";
+
+.doc pre.highlight code,
+.doc pre:not(.highlight) {
+  color: #abb2bf;
+  background: #282c34;
+  border-radius: 10px;
+}
+
+.doc pre.highlight ::selection,
+.doc pre:not(.highlight) ::selection {
+  text-shadow: none;
+  background: hsla(0, 0%, 100%, 0.15);
+}
+
+.doc .conum[data-value] {
+  border: 1px solid #abb2bf;
+}

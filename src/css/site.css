@@ -13,5 +13,8 @@
 @import "pagination.css";
 @import "header.css";
 @import "footer.css";
-@import "highlight.css";
+/*@import "highlight.css";*/
+@import "highlight-dark.css";
 @import "print.css";
+/*@import "site-extra.css";*/
+@import "docsearch.min.css";
