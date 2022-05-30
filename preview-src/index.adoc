@@ -1,6 +1,6 @@
 = 模型
-:toc:
-:toc-title:
+//:toc:
+//:toc-title:
 
 实体类代表为领域模型，并使用xml格式定义。
 
